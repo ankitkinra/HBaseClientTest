@@ -2,9 +2,6 @@ package kinra.test.hbase.basicclient;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -15,8 +12,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
@@ -24,11 +19,13 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTablePool;
 
 public class MoveRegionTest_92 {
 	private static HBaseAdmin admin = null;
 	private static ClusterStatus clusterStatus = null;
 	private static Configuration configuration = null;
+	private static HTablePool hTablePool = null;
 
 	public static void main(String[] args) throws IOException {
 		/*
@@ -45,8 +42,9 @@ public class MoveRegionTest_92 {
 		List<ServerName> allLiveRegionServers = new ArrayList<ServerName>();
 
 		HTableDescriptor[] allUserTables = admin.listTables("testTable");
+		hTablePool = new HTablePool(configuration, 10);
 		for (HTableDescriptor tableDesc : allUserTables) {
-			HTable htable = new HTable(configuration, tableDesc.getName());
+			HTable htable = (HTable)hTablePool.getTable(tableDesc.getName());
 
 			Map<HRegionInfo, ServerName> mapRegionsThisTable = htable
 					.getRegionLocations();
@@ -69,7 +67,7 @@ public class MoveRegionTest_92 {
 
 		// Now we have all the table Regions. We just need a list of all the
 		// servers
-		int i = 1;
+		int i = 10;
 		long totalTimeTaken = 0;
 		for (Map.Entry<HRegionInfo, ServerName> regionServerEntry : allTableAllRegions
 				.entrySet()) {
@@ -110,10 +108,8 @@ public class MoveRegionTest_92 {
 		 */
 		long moveStartTime = System.currentTimeMillis();
 		if (!regionToMove.isMetaRegion() && !regionToMove.isRootRegion()) {
-			/*
-			 * admin.move(regionToMove.getEncodedNameAsBytes(),
-			 * combinedHServerAddress.getBytes());
-			 */
+			admin.move(regionToMove.getEncodedNameAsBytes(),
+					combinedHServerAddress.getBytes());
 			System.out
 					.println(String
 							.format("#####################Would have moved region = %s to address = %s",
